@@ -1,5 +1,5 @@
 # The webserver module
-from flask import Flask, render_template, redirect, url_for, session
+from flask import Flask, render_template, redirect, url_for, session, request, url_for, jsonify
 from flask_socketio import SocketIO, emit
 
 # OpenCV and other Face Recogition modules
@@ -9,8 +9,11 @@ import face_recognition
 from pickle import loads
 
 # Other support modules
+import os
+import zipfile
 from base64 import b64encode
 from configparser import ConfigParser
+from werkzeug.utils import secure_filename
 
 # Custom modules
 from modules.base64_2_image import data_uri_to_cv2_img
@@ -31,15 +34,50 @@ data = loads(open(args["encodings"], "rb").read())
 # Basic app setup
 app = Flask(__name__, static_url_path='', static_folder='web/static', template_folder='web/templates')
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
+socketio = SocketIO(app, ping_interval=2000, ping_timeout=120000)
 
-# Initializing facial recognition
+# Initializing config for file uploader
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'dataset')
+ALLOWED_EXTENSIONS = set(['zip'])
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Defining routes
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+@app.route('/upload')
+def upload():
+    return render_template('uploader.html')
+
+
+@app.route('/upload-file', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'uploads[]' not in request.files:
+            return jsonify(status="ERROR", message="No file in request.files")
+        
+        file = request.files['uploads[]']
+        
+        # if user does not select file, browser also
+        # submit a empty part without filename
+        if file.filename == '':
+            return jsonify(status="ERROR", message="No file selected")
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(UPLOAD_FOLDER, filename))
+            zip_ref = zipfile.ZipFile(os.path.join(UPLOAD_FOLDER, filename), 'r')
+            zip_ref.extractall(UPLOAD_FOLDER)
+            zip_ref.close()
+            return jsonify(status="SUCCESS")
+    
+    return jsonify(status="ERROR", message="Post method not used")
 
 # Socket operations
 @socketio.on('connect')

@@ -1,3 +1,131 @@
-html,body {
-    margin: 0;
+html, body {
+	font-family: 'Raleway', sans-serif;
+	margin: 0;
+	background-image: linear-gradient(to bottom, #30cfd0 0%, #330867 100%);	
+	background-repeat: no-repeat;
+	background-size: cover;
+	height: auto;
+	min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+	width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+	background-image: linear-gradient(to top, #30cfd0 0%, #330867 100%);	
+}
+
+nav {
+	background-color: rgba(255, 255, 255, 0.9);
+	color: #555;
+    padding: 20px;
+    display: flex;
+    flex-direction: row-reverse;
+}
+
+nav a {
+	text-decoration: none;
+    color: #555;
+    padding: 0 20px;
+}
+
+nav a:hover {
+    color: #252525;
+    font-weight: bold;
+	text-decoration: none;
+}
+
+.content {
+	padding: 20px 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
+}
+
+.video-container {
+	width: 80%;
+}
+
+video {
+	width: 100%;
+	height: auto;
+	border: 5px solid #fff;
+	border-radius: 5px;
+}
+
+.input-container {
+	width: 80%;
+}
+
+.input-container input {
+	border: 3px solid #fff;
+	border-radius: 5px;
+	padding: 15px 10px;
+	margin-bottom: 20px;
+	background-color: transparent;
+	font-weight: bold;
+	color: #fff;
+	font-size: 18px;
+	background-color: rgba(0,0,0,0.3);
+	text-align: center;
+}
+
+.input-container input[type=text] {
+	width: 50%;
+}
+
+.input-container input[type=number] {
+	width: 15%;
+}
+
+.input-container button {
+	width: auto;
+}
+
+button {
+	border: 3px solid #fff;
+	border-radius: 5px;
+	padding: 15px 20px;
+	margin-bottom: 20px;
+	background-color: transparent;
+	font-weight: bold;
+	color: #fff;
+	font-size: 18px;
+	background-color: rgba(0,0,0,0.3);
+	width: 25%;
+	cursor: pointer;
+}
+
+button:hover {
+	background-color: rgba(255, 255, 255, 0.8);
+	color: #353535;
+}
+
+button:disabled {
+	background-color: rgba(255, 255, 255, 0.2);
+	cursor: default;
+	color: #353535;
+}
+
+.loader {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 100%;
+	width: 100%;
+	overflow-y: hidden;
+	background-color: rgba(255, 255, 255, 0.95);
+	color: #353535;
+	font-size: 150%;
+	font-weight: bold;
+	display: flex;
+	text-align: center;
+	justify-content: center;
+	align-items: center;
+}
+
+::placeholder {
+	color: #ccc;
 }

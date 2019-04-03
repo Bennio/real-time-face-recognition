@@ -4,7 +4,7 @@ let image = document.querySelector('#live');
 let ctx = canvas.getContext('2d');
 
 let initialName = "Unknown";
-let socket = io.connect('http://127.0.0.1:5000');
+let socket = null;
 
 if (navigator.mediaDevices.getUserMedia) {
 	navigator.mediaDevices
@@ -17,31 +17,37 @@ if (navigator.mediaDevices.getUserMedia) {
 		});
 }
 
-socket.on('connect', function() {
-	console.log("Connected");
-});
-
-socket.on('disconnect', function() {
-	console.log("Connection closed");
-});
-
-socket.on('person_name', function(message) {
-    if(message !== initialName) {
-        speak("Hello " + message + "!");
-        initialName = message;
-    }
-});
-
-socket.on('media', function(message) {
-    console.log("Got response");
-	let bytes = new Uint8Array(message);
-    let dataURI = 'data:image/png;base64,'+ encode(bytes);
-    
-    document.getElementById('live').src = dataURI;
-});
-
 let timerPID = null;
 function startStreaming() {
+    socket = io.connect(location.origin, {
+        'timeout': 120000
+    });
+
+    socket.on('connect', function() {
+        console.log("Connected");
+    });
+    
+    socket.on('disconnect', function() {
+        console.log("Connection closed");
+    });
+    
+    socket.on('person_name', function(message) {
+        console.log("Name", message)
+        if(message !== initialName) {
+            console.log("name Changed", message, initialName);
+            speak("Hello " + message + "!");
+            initialName = message;
+        }
+    });
+    
+    socket.on('media', function(message) {
+        console.log("Got response");
+        let bytes = new Uint8Array(message);
+        let dataURI = 'data:image/png;base64,'+ encode(bytes);
+        
+        document.getElementById('live').src = dataURI;
+    });
+
 	timerPID = setInterval(() => {
 		ctx.drawImage(video, 0, 0, 640, 480);
         let data = canvas.toDataURL('image/jpeg');
@@ -54,7 +60,7 @@ function startStreaming() {
 function stopStreaming() {
 	if(timerPID) {
 		clearInterval(timerPID);
-	}
+    }
 }
 
 function dataURItoBlob(dataURI) {
