@@ -1,10 +1,11 @@
 let video = document.querySelector('#videoElement');
 let canvas = document.querySelector('#canvas');
-let image = document.querySelector('#live');
+let imageElement = document.querySelector('#live');
 let ctx = canvas.getContext('2d');
 
-let initialName = "Unknown";
 let socket = null;
+let temporaryImage;
+let initialName = "Unknown";
 
 if (navigator.mediaDevices.getUserMedia) {
 	navigator.mediaDevices
@@ -19,6 +20,7 @@ if (navigator.mediaDevices.getUserMedia) {
 
 let timerPID = null;
 function startStreaming() {
+    console.log('[INFO] STARTING STREAMING')
     socket = io.connect(location.origin, {
         'timeout': 120000
     });
@@ -40,27 +42,35 @@ function startStreaming() {
         }
     });
     
-    socket.on('media', function(message) {
+    socket.on('restreaming', function(message) {
         let bytes = new Uint8Array(message);
-        let dataURI = 'data:image/png;base64,'+ encode(bytes);
+        let dataURI = 'data:image/jpeg;base64,'+ encode(bytes);
+        
         console.log(dataURI);
-        document.getElementById('live').src = dataURI;
+        imageElement.setAttribute('src', dataURI);
+        // drawDataURIOnCanvas(dataURI, liveCanvas);
+        // updateImageElement(dataURI);
     });
 
-	timerPID = setInterval(() => {
+
+	timerPID = setTimeout(() => {
 		ctx.drawImage(video, 0, 0, 640, 480);
         let data = canvas.toDataURL('image/jpeg');
-		
+        
+        console.log("[SENDING]")
 		// let blob = dataURItoBlob(data);
 		socket.emit('stream', data);
     }, 100);
 }
 
+
 function stopStreaming() {
 	if(timerPID) {
+        console.log("[CLEARING]");
 		clearInterval(timerPID);
     }
 }
+
 
 function dataURItoBlob(dataURI) {
     var binary = atob(dataURI.split(',')[1]);
@@ -70,6 +80,7 @@ function dataURItoBlob(dataURI) {
     }
     return new Blob([new Uint8Array(array)], {type: 'image/jpeg'});
 }
+
 
 function encode (input) {
     var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
@@ -98,6 +109,7 @@ function encode (input) {
     return output;
 }
 
+
 function speak(text, callback) {
     let u = new SpeechSynthesisUtterance();
     u.text = text;
@@ -116,4 +128,45 @@ function speak(text, callback) {
     };
  
     speechSynthesis.speak(u);
+}
+
+
+function updateImageElement(base64Image) {
+    let BASE64_MARKER = ';base64,';
+    let objectURL = window.URL || window.webkitURL;
+
+    function convertDataURIToBlob(dataURI) {
+        if(!dataURI) {
+            return;
+        }
+        
+        let base64Index = dataURI.indexOf(BASE64_MARKER) + BASE64_MARKER.length;
+        let base64 = dataURI.substring(base64Index);
+        let raw = window.atob(base64);
+        let rawLength = raw.length;
+        let array = new Uint8Array(new ArrayBuffer(rawLength));
+
+        for (let i = 0; i < rawLength; i++) {
+            array[i] = raw.charCodeAt(i);
+        }
+
+        return new Blob([array], {type: "image/jpeg"});
+    }
+
+    if (temporaryImage) {
+        objectURL.revokeObjectURL(temporaryImage);
+    }
+    
+    let imageDataBlob = convertDataURIToBlob(base64Image);
+    temporaryImage = objectURL.createObjectURL(imageDataBlob);
+    imageElement.src = temporaryImage;
+}
+
+
+function drawDataURIOnCanvas(strDataURI, canvas) {
+    let img = new window.Image();
+    img.addEventListener("load", function () {
+        canvas.getContext("2d").drawImage(img, 0, 0);
+    });
+    img.setAttribute("src", strDataURI);
 }

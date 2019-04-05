@@ -1,3 +1,23 @@
+try:
+    import eventlet
+    eventlet.monkey_patch()
+    print('Using eventlet')
+    create_thread_func = lambda f: f
+    start_thread_func = lambda f: eventlet.spawn(f)
+except ImportError:
+    try:
+        import gevent
+        import gevent.monkey
+        gevent.monkey.patch_all()
+        print('Using gevent')
+        create_thread_func = lambda f: gevent.Greenlet(f)
+        start_thread_func = lambda t: t.start()
+    except ImportError:
+        import threading
+        print('Using threading')
+        create_thread_func = lambda f: threading.Thread(target=f)
+        start_thread_func = lambda t: t.start()
+
 # The webserver module
 from flask import Flask, render_template, redirect, url_for, session, request, url_for, jsonify
 from flask_socketio import SocketIO, emit
@@ -33,7 +53,7 @@ data = loads(open(args["encodings"], "rb").read())
 # Basic app setup
 app = Flask(__name__, static_url_path='', static_folder='web/static', template_folder='web/templates')
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, ping_interval=2000, ping_timeout=120000)
+socketio = SocketIO(app, ping_interval=2000, ping_timeout=120000, async_mode='eventlet')
 
 # Initializing config for file uploader
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'dataset')
@@ -143,10 +163,8 @@ def onimage(img):
     face_names = []
 
     # Find all the faces and face encodings in the current frame of video
-    print('\n[INFO] Recognizing faces')
     boxes = face_recognition.face_locations(rgb_small_frame, model=args["detection-method"])
     encodings = face_recognition.face_encodings(rgb_small_frame, boxes)
-    print('[INFO] Generated boxes and encodings')
 
     # loop over the facial embeddings
     for encoding in encodings:
@@ -178,19 +196,18 @@ def onimage(img):
         cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
         font = cv2.FONT_HERSHEY_DUPLEX
         cv2.putText(frame, "Hello", (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1, cv2.LINE_AA)
-        
-        print('[NAME]', name)
+
         emit('person_name', name)
+        socketio.sleep(0)
 
     # Encoding and send data back to the client
-    retval, buffer = cv2.imencode('.jpg', frame)
+    retval, buffer = cv2.imencode('.jpeg', frame)
     encoded_image = b64encode(buffer)
-    
-    emit('media', encoded_image)
-    print(encoded_image)
-    print('[DONE] Done everything and retriving')
+
+    emit('restreaming', encoded_image)
+    socketio.sleep(0)
 
 
 # Starting the program
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0')
+    socketio.run(app)
