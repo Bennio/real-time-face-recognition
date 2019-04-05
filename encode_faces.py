@@ -43,8 +43,7 @@ for (i, imagePath) in enumerate(imagePaths):
 	# detect the (x, y)-coordinates of the bounding boxes
 	# corresponding to each face in the input image
 
-	boxes = face_recognition.face_locations(rgb,
-		model=args["detection-method"])
+	boxes = face_recognition.face_locations(rgb, model=args["detection-method"])
 
 
 	# compute the facial embedding for the face
@@ -52,8 +51,7 @@ for (i, imagePath) in enumerate(imagePaths):
 
 	# loop over the encodings
 	for encoding in encodings:
-		# add each encoding + name to our set of known names and
-		# encodings
+		# add each encoding + name to our set of known names and encodings
 		knownEncodings.append(encoding)
 		knownNames.append(name)
 

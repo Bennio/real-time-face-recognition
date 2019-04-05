@@ -41,10 +41,9 @@ function startStreaming() {
     });
     
     socket.on('media', function(message) {
-        console.log("Got response");
         let bytes = new Uint8Array(message);
         let dataURI = 'data:image/png;base64,'+ encode(bytes);
-        
+        console.log(dataURI);
         document.getElementById('live').src = dataURI;
     });
 
