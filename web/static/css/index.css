@@ -48,7 +48,7 @@ nav a:hover {
 	width: 80%;
 }
 
-video {
+video, img {
 	width: 100%;
 	height: auto;
 	border: 5px solid #fff;
@@ -128,4 +128,8 @@ button:disabled {
 
 ::placeholder {
 	color: #ccc;
+}
+
+.hide {
+	display: none;
 }

@@ -3,15 +3,39 @@ let canvas = document.querySelector('#canvas');
 let imageElement = document.querySelector('#live');
 let ctx = canvas.getContext('2d');
 
+let videoWidth, videoHeight;
+
 let socket = null;
 let temporaryImage;
 let initialName = "Unknown";
 
 if (navigator.mediaDevices.getUserMedia) {
 	navigator.mediaDevices
-		.getUserMedia({ video: true })
+		.getUserMedia({ 
+            audio: false,
+            video: {
+                width: { min: 640, ideal: 1280, max: 1920 },
+                height: { min: 480, ideal: 720, max: 1080 },
+                frameRate: { ideal: 25, max: 30 }
+            }
+        })
 		.then(function(stream) {
-			video.srcObject = stream;
+            video.srcObject = stream;
+
+            let getVideoSize = function() {
+                videoWidth = video.videoWidth;
+                videoHeight = video.videoHeight;
+
+                imageElement.setAttribute('width', videoWidth);
+                imageElement.setAttribute('height', videoHeight);
+
+                canvas.setAttribute('width', videoWidth);
+                canvas.setAttribute('height', videoHeight);
+
+                video.removeEventListener('playing', getVideoSize, false);
+            };
+
+            video.addEventListener('playing', getVideoSize, false);
 		})
 		.catch(function(err0r) {
 			console.log('Something went wrong!');
@@ -21,6 +45,9 @@ if (navigator.mediaDevices.getUserMedia) {
 let timerPID = null;
 function startStreaming() {
     console.log('[INFO] STARTING STREAMING')
+    video.classList.add('hide');
+    imageElement.classList.remove('hide');
+
     socket = io.connect(location.origin, {
         'timeout': 120000
     });
@@ -34,10 +61,8 @@ function startStreaming() {
     });
     
     socket.on('person_name', function(message) {
-        console.log("Name", message)
         if(message !== initialName) {
-            console.log("name Changed", message, initialName);
-            speak("Hello " + message + "!");
+            speak(generateGreetingMessage(message));
             initialName = message;
         }
     });
@@ -46,25 +71,26 @@ function startStreaming() {
         let bytes = new Uint8Array(message);
         let dataURI = 'data:image/jpeg;base64,'+ encode(bytes);
         
-        console.log(dataURI);
         imageElement.setAttribute('src', dataURI);
         // drawDataURIOnCanvas(dataURI, liveCanvas);
         // updateImageElement(dataURI);
     });
 
 
-	timerPID = setTimeout(() => {
-		ctx.drawImage(video, 0, 0, 640, 480);
+	timerPID = setInterval(() => {
+		ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
         let data = canvas.toDataURL('image/jpeg');
         
-        console.log("[SENDING]")
 		// let blob = dataURItoBlob(data);
 		socket.emit('stream', data);
-    }, 100);
+    }, 40);
 }
 
 
 function stopStreaming() {
+    imageElement.classList.add('hide');
+    video.classList.remove('hide');
+    
 	if(timerPID) {
         console.log("[CLEARING]");
 		clearInterval(timerPID);
@@ -169,4 +195,21 @@ function drawDataURIOnCanvas(strDataURI, canvas) {
         canvas.getContext("2d").drawImage(img, 0, 0);
     });
     img.setAttribute("src", strDataURI);
+}
+
+function generateGreetingMessage(name) {
+    let hours = new Date().getHours();
+    console.log(hours);
+    let message = 'Hello';
+
+    if (hours > 5) {
+        message = 'Good Morning';
+    } if (hours >= 12) {
+        message = 'Good Afternoon';
+    } if (hours >= 16 && hours < 19) {
+        message = 'Good Evening';
+    }
+
+    message += ', ' + name + ' !';
+    return message;
 }

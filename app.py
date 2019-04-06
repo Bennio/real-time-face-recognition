@@ -156,55 +156,58 @@ def ondisconnect():
 @socketio.on('stream')
 def onimage(img):
     frame = data_uri_to_cv2_img(img)
-    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-    
-    # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-    rgb_small_frame = small_frame[:, :, ::-1]
-    face_names = []
+    try:
+        small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+        
+        # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+        rgb_small_frame = small_frame[:, :, ::-1]
+        face_names = []
 
-    # Find all the faces and face encodings in the current frame of video
-    boxes = face_recognition.face_locations(rgb_small_frame, model=args["detection-method"])
-    encodings = face_recognition.face_encodings(rgb_small_frame, boxes)
+        # Find all the faces and face encodings in the current frame of video
+        boxes = face_recognition.face_locations(rgb_small_frame, model=args["detection-method"])
+        encodings = face_recognition.face_encodings(rgb_small_frame, boxes)
 
-    # loop over the facial embeddings
-    for encoding in encodings:
-        # attempt to match each face in the input image to our known encodings
-        matches = face_recognition.compare_faces(data["encodings"], encoding)
-        name = "Unknown"
+        # loop over the facial embeddings
+        for encoding in encodings:
+            # attempt to match each face in the input image to our known encodings
+            matches = face_recognition.compare_faces(data["encodings"], encoding)
+            name = "Unknown"
 
-        # check to see if we have found a match
-        if True in matches:
-            first_match_index = matches.index(True)
-            name = data['encodings'][first_match_index]
+            # check to see if we have found a match
+            if True in matches:
+                first_match_index = matches.index(True)
+                name = data['names'][first_match_index]
 
-        # update the list of names
-        face_names.append(name)
+            # update the list of names
+            face_names.append(name)
 
+        # loop over the recognized faces
+        for (top, right, bottom, left), name in zip(boxes, face_names):
+            # Scale back up face locations since the frame we detected in was scaled to 1/4 size
+            top *= 4
+            right *= 4
+            bottom *= 4
+            left *= 4
+                
+            # Draw a box around the face
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
 
-    # loop over the recognized faces
-    for (top, right, bottom, left), name in zip(boxes, face_names):
-        # Scale back up face locations since the frame we detected in was scaled to 1/4 size
-        top *= 4
-        right *= 4
-        bottom *= 4
-        left *= 4
-
-        # Draw a box around the face
-        cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-
-        # Draw a label with a name below the face
-        cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
-        font = cv2.FONT_HERSHEY_DUPLEX
-        cv2.putText(frame, "Hello", (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1, cv2.LINE_AA)
-
-        emit('person_name', name)
-        socketio.sleep(0)
+            # Draw a label with a name below the face
+            cv2.rectangle(frame, (left, bottom - 20), (right, bottom), (0, 0, 255), cv2.FILLED)
+            
+            font = cv2.FONT_HERSHEY_DUPLEX
+            cv2.putText(frame, name, (left + 6, bottom - 6), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            
+            emit('person_name', name)
+            socketio.sleep(0)
+    except:
+        pass
 
     # Encoding and send data back to the client
-    retval, buffer = cv2.imencode('.jpeg', frame)
-    encoded_image = b64encode(buffer)
+    retval, buffer = cv2.imencode('.jpg', frame)
+    # encoded_image = b64encode(buffer)
 
-    emit('restreaming', encoded_image)
+    emit('restreaming', buffer.tobytes())
     socketio.sleep(0)
 
 
