@@ -24,9 +24,9 @@ from flask_socketio import SocketIO, emit
 
 # OpenCV and other Face Recogition modules
 import cv2
-import imutils
 import face_recognition
-from pickle import loads
+from pickle import loads, dumps
+from imutils import paths
 
 # Other support modules
 import os
@@ -48,7 +48,11 @@ args["encodings"]=config.get('arg', 'encodings')
 args["detection-method"]=config.get('arg', 'detection-method')
 
 # Loading data
-data = loads(open(args["encodings"], "rb").read())
+data = ''
+try:
+    data = loads(open(args["encodings"], "rb").read())
+except:
+    data = ''
 
 # Basic app setup
 app = Flask(__name__, static_url_path='', static_folder='web/static', template_folder='web/templates')
@@ -109,10 +113,12 @@ def train():
             knownNames.append(name)
 
     data = { "encodings": knownEncodings, "names": knownNames }
-    
+
     encodingsFile = open(args["encodings"], "wb")
-    encodingsFile.write(pickle.dumps(data))
+    encodingsFile.write(dumps(data))
     encodingsFile.close()
+
+    return jsonify(status="SUCCESS", message="Everythings perfect")
 
 
 # The file uploader route - to upload the files

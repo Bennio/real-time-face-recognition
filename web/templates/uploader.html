@@ -35,6 +35,15 @@
 				</div>
 			</div>
 		</div>
+		
+		<div class="container">
+			<div>
+				<div id="info_train" class="panel panel-info info hide">Please wait! It takes about 5 sec to process an image</div>
+				<div id="error_train" class="panel panel-danger error hide">An error occured while training the model please try again</div>
+				<div id="success_train" class="panel panel-success success hide">Model trained successfully</div>
+				<button class="button" onClick="train()">Train Model</button>
+			</div>
+		</div>
 
 		<input id="upload-input" type="file" name="uploads[]" multiple="multiple"></br>
 

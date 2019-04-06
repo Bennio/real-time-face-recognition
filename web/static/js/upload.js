@@ -60,3 +60,27 @@ $('#upload-input').on('change', function() {
 		});
 	}
 });
+
+
+function train() {
+	let infoElement = document.querySelector('#info_train')
+	let errorElement = document.querySelector('#error_train');
+	let successElement = document.querySelector('#success_train');
+
+	infoElement.classList.remove('hide');
+	errorElement.classList.add('hide');
+	successElement.classList.add('hide');
+
+	$.ajax({
+		url: '/train',
+		type: 'GET',
+		success: function(data) {
+			infoElement.classList.add('hide');
+			successElement.classList.remove('hide');
+		},
+		error: function(data) {
+			infoElement.classList.add('hide');
+			errorElement.classList.remove('hide');
+		}
+	});
+}
