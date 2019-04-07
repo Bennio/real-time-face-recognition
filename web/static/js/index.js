@@ -209,6 +209,9 @@ function generateGreetingMessage(name) {
     } if (hours >= 16 && hours < 19) {
         message = 'Good Evening';
     }
+	if(name==='Unknown'){
+        name='Stranger'
+    }
 
     message += ', ' + name + ' !';
     return message;
