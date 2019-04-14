@@ -48,9 +48,7 @@ nav a:hover {
 	width: 80%;
 }
 
-video, img {
-	width: 100%;
-	height: auto;
+video, img, canvas {
 	border: 5px solid #fff;
 	border-radius: 5px;
 }

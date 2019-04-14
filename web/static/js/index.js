@@ -94,14 +94,13 @@ function drawRectangle(coordinates) {
 
 let frameCounter = 0;
 function sendDataFrames() {
+    ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
     if ((frameCounter % 25) === 0) {
-        ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
         let data = canvas.toDataURL('image/jpeg');
         socket.emit('stream', data);
-        
-        drawRectangle(rectangleCoordinates);
     }
 
+    drawRectangle(rectangleCoordinates);
     frameCounter += 1;
 }
 
@@ -228,7 +227,7 @@ function generateGreetingMessage(name) {
 
     if (hours > 5) {
         message = 'Good Morning';
-    } if (hours >= 12) {
+    } if (hours >= 12 && hours < 16) {
         message = 'Good Afternoon';
     } if (hours >= 16 && hours < 19) {
         message = 'Good Evening';
