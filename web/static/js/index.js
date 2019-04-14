@@ -28,15 +28,15 @@ function init() {
     });
     
     socket.on('face_coordinates', function(coordinates) {
-        if(coordinates.success) {
+        if (coordinates.status == 'SUCCESS') {
             let left = coordinates.left;
             let top = coordinates.top;
             let width = coordinates.right - coordinates.left;
             let height = coordinates.bottom - coordinates.top;
-            rectangleCoordinates = {left, top, width, height};
+            rectangleCoordinates = { left, top, width, height };
+        } else {
+            rectangleCoordinates = null;
         }
-
-        rectangleCoordinates = null;
     });
 }
 
@@ -75,11 +75,12 @@ if (navigator.mediaDevices.getUserMedia) {
 }
 
 
-let shouldSendFrame = true;
+function drawRectangle(coordinates) {
+    console.log("coordinates", coordinates);
 
-function drawRectangle() {
-    if(rectangleCoordinates) {
-        let { left, top, width, height } = rectangleCoordinates;
+    if(coordinates) {
+        let { left, top, width, height } = coordinates;
+        console.log({ left, top, width, height });
 
         ctx.beginPath();
         ctx.lineWidth = "6";
@@ -90,22 +91,24 @@ function drawRectangle() {
     }
 }
 
+
+let frameCounter = 0;
 function sendDataFrames() {
-    if(shouldSendFrame) {
+    if ((frameCounter % 25) === 0) {
         ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
-        drawRectangle();
         let data = canvas.toDataURL('image/jpeg');
-        
         socket.emit('stream', data);
+        
+        drawRectangle(rectangleCoordinates);
     }
 
-    shouldSendFrame = !shouldSendFrame;
+    frameCounter += 1;
 }
 
 
 function startStreaming() {
     console.log('[INFO] STARTING STREAMING');
-    timerPID = window.setInterval(sendDataFrames, 84);
+    timerPID = window.setInterval(sendDataFrames, 40);
 }
 
 
@@ -230,8 +233,9 @@ function generateGreetingMessage(name) {
     } if (hours >= 16 && hours < 19) {
         message = 'Good Evening';
     }
-	if(name==='Unknown'){
-        name='Stranger'
+
+	if (name === 'Unknown'){
+        name = 'Stranger'
     }
 
     message += ', ' + name + ' !';

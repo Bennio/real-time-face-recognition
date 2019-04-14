@@ -194,7 +194,7 @@ def onimage(img):
             bottom *= 4
             left *= 4
             
-            coordinates = {'top': top, 'right': right, 'bottom': bottom, 'left': left}
+            coordinates = {'status': "SUCCESS", 'top': top, 'right': right, 'bottom': bottom, 'left': left}
             print('Face Coordintes', coordinates)
             
             emit('face_coordinates', coordinates)
