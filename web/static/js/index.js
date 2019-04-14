@@ -1,61 +1,21 @@
 let video = document.querySelector('#videoElement');
 let canvas = document.querySelector('#canvas');
-let imageElement = document.querySelector('#live');
 let ctx = canvas.getContext('2d');
 
-let videoWidth, videoHeight;
-
-let socket = null;
-let temporaryImage;
-let initialName = "Unknown";
-
-if (navigator.mediaDevices.getUserMedia) {
-	navigator.mediaDevices
-		.getUserMedia({ 
-            audio: false,
-            video: {
-                width: { min: 640, ideal: 1280, max: 1920 },
-                height: { min: 480, ideal: 720, max: 1080 },
-                frameRate: { ideal: 25, max: 30 }
-            }
-        })
-		.then(function(stream) {
-            video.srcObject = stream;
-
-            let getVideoSize = function() {
-                videoWidth = video.videoWidth;
-                videoHeight = video.videoHeight;
-
-                imageElement.setAttribute('width', videoWidth);
-                imageElement.setAttribute('height', videoHeight);
-
-                canvas.setAttribute('width', videoWidth);
-                canvas.setAttribute('height', videoHeight);
-
-                video.removeEventListener('playing', getVideoSize, false);
-            };
-
-            video.addEventListener('playing', getVideoSize, false);
-		})
-		.catch(function(err0r) {
-			console.log('Something went wrong!');
-		});
-}
-
+let videoWidth = 0;
+let videoHeight = 0;
 let timerPID = null;
-function startStreaming() {
-    console.log('[INFO] STARTING STREAMING')
-    video.classList.add('hide');
-    imageElement.classList.remove('hide');
+let temporaryImage = null;
+let initialName = "Unknown";
+let rectangleCoordinates = null;
+let socket = io.connect(location.origin, { 'timeout': 120000 });
 
-    socket = io.connect(location.origin, {
-        'timeout': 120000
-    });
-
+// Setup socketio for streaming
+function init() {
     socket.on('connect', function() {
         console.log("Connected");
     });
-    
+
     socket.on('disconnect', function() {
         console.log("Connection closed");
     });
@@ -67,34 +27,115 @@ function startStreaming() {
         }
     });
     
-    socket.on('restreaming', function(message) {
-        let bytes = new Uint8Array(message);
-        let dataURI = 'data:image/jpeg;base64,'+ encode(bytes);
-        
-        imageElement.setAttribute('src', dataURI);
-        // drawDataURIOnCanvas(dataURI, liveCanvas);
-        // updateImageElement(dataURI);
+    socket.on('face_coordinates', function(coordinates) {
+        if(coordinates.success) {
+            let left = coordinates.left;
+            let top = coordinates.top;
+            let width = coordinates.right - coordinates.left;
+            let height = coordinates.bottom - coordinates.top;
+            rectangleCoordinates = {left, top, width, height};
+        }
+
+        rectangleCoordinates = null;
+    });
+}
+
+init();
+
+// Initializing the canvas
+if (navigator.mediaDevices.getUserMedia) {
+	let grabUserMedia = navigator.mediaDevices.getUserMedia({ 
+        audio: false,
+        video: {
+            width: { min: 640, ideal: 1280, max: 1920 },
+            height: { min: 480, ideal: 720, max: 1080 },
+            frameRate: { ideal: 25, max: 30 }
+        }
     });
 
+	grabUserMedia.then(function(stream) {
+        video.srcObject = stream;
 
-	timerPID = setInterval(() => {
-		ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+        let getVideoSize = function() {
+            videoWidth = video.videoWidth;
+            videoHeight = video.videoHeight;
+
+            canvas.setAttribute('width', videoWidth);
+            canvas.setAttribute('height', videoHeight);
+
+            video.removeEventListener('playing', getVideoSize, false);
+        };
+
+        video.addEventListener('playing', getVideoSize, false);
+    });
+
+    grabUserMedia.catch(function(error) {
+        console.log('Something went wrong!', error);
+    });
+}
+
+
+let shouldSendFrame = true;
+
+function drawRectangle() {
+    if(rectangleCoordinates) {
+        let { left, top, width, height } = rectangleCoordinates;
+
+        ctx.beginPath();
+        ctx.lineWidth = "6";
+        ctx.strokeStyle = "green";
+
+        ctx.rect(left, top, width, height);
+        ctx.stroke();
+    }
+}
+
+function sendDataFrames() {
+    if(shouldSendFrame) {
+        ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+        drawRectangle();
         let data = canvas.toDataURL('image/jpeg');
         
-		// let blob = dataURItoBlob(data);
-		socket.emit('stream', data);
-    }, 40);
+        socket.emit('stream', data);
+    }
+
+    shouldSendFrame = !shouldSendFrame;
+}
+
+
+function startStreaming() {
+    console.log('[INFO] STARTING STREAMING');
+    timerPID = window.setInterval(sendDataFrames, 84);
 }
 
 
 function stopStreaming() {
-    imageElement.classList.add('hide');
-    video.classList.remove('hide');
-    
 	if(timerPID) {
         console.log("[CLEARING]");
-		clearInterval(timerPID);
+		window.clearInterval(timerPID);
+        socket.disconnect();
     }
+}
+
+
+function speak(text, callback) {
+    let u = new SpeechSynthesisUtterance();
+    u.text = text;
+    u.lang = 'en-US';
+ 
+    u.onend = function () {
+        if (callback) {
+            callback();
+        }
+    };
+ 
+    u.onerror = function (e) {
+        if (callback) {
+            callback(e);
+        }
+    };
+ 
+    speechSynthesis.speak(u);
 }
 
 
@@ -133,27 +174,6 @@ function encode (input) {
                   keyStr.charAt(enc3) + keyStr.charAt(enc4);
     }
     return output;
-}
-
-
-function speak(text, callback) {
-    let u = new SpeechSynthesisUtterance();
-    u.text = text;
-    u.lang = 'en-US';
- 
-    u.onend = function () {
-        if (callback) {
-            callback();
-        }
-    };
- 
-    u.onerror = function (e) {
-        if (callback) {
-            callback(e);
-        }
-    };
- 
-    speechSynthesis.speak(u);
 }
 
 
@@ -196,6 +216,7 @@ function drawDataURIOnCanvas(strDataURI, canvas) {
     });
     img.setAttribute("src", strDataURI);
 }
+
 
 function generateGreetingMessage(name) {
     let hours = new Date().getHours();
