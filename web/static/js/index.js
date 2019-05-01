@@ -8,6 +8,7 @@ let timerPID = null;
 let temporaryImage = null;
 let initialName = "Unknown";
 let rectangleCoordinates = null;
+let lastGeneratedFrame = 0;
 let socket = io.connect(location.origin, { 'timeout': 120000 });
 
 
@@ -34,6 +35,7 @@ function initializeSocketIO() {
             let width = coordinates.right - coordinates.left;
             let height = coordinates.bottom - coordinates.top;
             rectangleCoordinates = { left, top, width, height };
+            lastGeneratedFrame = 0;
         } else {
             rectangleCoordinates = null;
         }
@@ -101,8 +103,12 @@ function sendDataFrames() {
         socket.emit('stream', data);
     }
 
-    drawRectangle(rectangleCoordinates);
+    if(lastGeneratedFrame <= 25) {
+        drawRectangle(rectangleCoordinates);
+    }
+
     frameCounter += 1;
+    lastGeneratedFrame += 1;
 }
 
 
